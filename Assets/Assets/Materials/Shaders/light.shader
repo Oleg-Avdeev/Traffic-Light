@@ -6,7 +6,7 @@ Shader "Unlit/Signal"
 {
     Properties
     {
-        [NoScaleOffset] _MainTex ("Texture", 2D) = "white" {}
+        _MainTex ("Texture", 2D) = "white" {}
         _Color ("Color", Color) = (1,1,1,1)
         _Active ("Active", Float) = 0
         _Blinking ("Blinking", Float) = 0
@@ -48,12 +48,15 @@ Shader "Unlit/Signal"
 #define _Color_arr MyProperties
             UNITY_INSTANCING_BUFFER_END(MyProperties)
 
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+
             v2f vert (appdata v)
             {
                 UNITY_SETUP_INSTANCE_ID(v);
 
                 v2f o;
-                o.uv = v.texcoord;
+                o.uv = v.texcoord * _MainTex_ST.xy + _MainTex_ST.zw;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.blink = UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Blinking);
                 o.diff  = UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color)
@@ -62,11 +65,10 @@ Shader "Unlit/Signal"
                 return o;
             }
             
-            sampler2D _MainTex;
-            
             fixed4 frag (v2f i) : SV_Target
             {
-                return i.diff * lerp(1, (sin(_Time.w*4) + 3)/4, i.blink);
+                fixed4 mask = tex2D(_MainTex, i.uv);
+                return i.diff * lerp(1, (sin(_Time.w*4) + 3)/4, i.blink) * mask.r;
             }
             
             ENDCG
